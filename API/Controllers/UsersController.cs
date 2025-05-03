@@ -20,7 +20,7 @@ namespace API.Controllers
         [HttpGet("{id:int}")] // api/users/1
         public async Task<ActionResult<IEnumerable<AppUser>>> GetUsers(int id)
         {
-            AppUser user = await context.Users.FindAsync(id);
+            AppUser? user = await context.Users.FindAsync(id);
 
             if (user == null) return NotFound();
             return Ok(user);

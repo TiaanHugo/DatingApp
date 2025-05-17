@@ -41,13 +41,22 @@ public class AccountController(DataContext context, ITokenService tokenService) 
     [Route("login")]
     public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
     {
-        var user = await context.Users.SingleOrDefaultAsync(x => x.UserName.ToLower() == loginDto.Username.ToLower());
-        if (user == null) return Unauthorized("Invalid");
-        using var hmac = new HMACSHA512(user.PasswordSalt);
+        var normalizedUsername = loginDto.Username.ToLowerInvariant();
 
-        for (int i = 0; i < user.PasswordHash.Length; i++)
+        var user = await context.Users
+            .SingleOrDefaultAsync(x => x.UserName.ToLower() == normalizedUsername);
+
+        if (user == null)
+            return Unauthorized("Invalid username or password.");
+
+        using var hmac = new HMACSHA512(user.PasswordSalt);
+        var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password));
+
+        // Constant-time comparison to prevent timing attacks
+        if (computedHash.Length != user.PasswordHash.Length ||
+            !CryptographicOperations.FixedTimeEquals(computedHash, user.PasswordHash))
         {
-            if (user.PasswordHash[i] != hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password))[i]) return BadRequest("Invalid password");
+            return Unauthorized("Invalid username or password.");
         }
 
         return new UserDto

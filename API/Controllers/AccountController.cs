@@ -47,7 +47,7 @@ public class AccountController(DataContext context, ITokenService tokenService) 
             .SingleOrDefaultAsync(x => x.UserName.ToLower() == normalizedUsername);
 
         if (user == null)
-            return Unauthorized("Invalid username or password.");
+            return Unauthorized("Invalid username");
 
         using var hmac = new HMACSHA512(user.PasswordSalt);
         var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password));
@@ -56,7 +56,7 @@ public class AccountController(DataContext context, ITokenService tokenService) 
         if (computedHash.Length != user.PasswordHash.Length ||
             !CryptographicOperations.FixedTimeEquals(computedHash, user.PasswordHash))
         {
-            return Unauthorized("Invalid username or password.");
+            return Unauthorized("Invalid password.");
         }
 
         return new UserDto
